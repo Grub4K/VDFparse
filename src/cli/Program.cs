@@ -159,7 +159,7 @@ namespace CLI
             }
             foreach (var query in queries)
             {
-                Console.WriteLine(dataset.Data.Search(query));
+                Console.WriteLine(String.Join("\n", dataset.Data.Search(query)));
             }
             return 0;
         }
