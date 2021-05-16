@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 using VDFparse;
@@ -102,20 +103,35 @@ namespace CLI
                     case "info":
                         return Info(vdfFile);
                 }
-                uint id;
-                bool success = uint.TryParse(args[2], out id);
-                if (!success)
+                List<Dataset> processing;
+                if (args[2] == "*")
                 {
-                    Console.Error.WriteLine(ErrorInvalidNumber, args[2]);
-                    return 5;
+                    processing = vdfFile.Datasets;
+                }
+                else
+                {
+                    uint id;
+                    bool success = uint.TryParse(args[2], out id);
+                    if (!success)
+                    {
+                        Console.Error.WriteLine(ErrorInvalidNumber, args[2]);
+                        return 5;
+                    }
+                    var dataset = vdfFile.FindByID(id);
+                    if (dataset == null)
+                    {
+                        Console.Error.WriteLine(ErrorNoId, id);
+                        return 6;
+                    }
+                    processing = new List<Dataset> {dataset};
                 }
                 switch (args[0])
                 {
                     case "json":
                         int.TryParse(args.ElementAtOrDefault(4), out int indent);
-                        return Json(vdfFile, id, indent: 4);
+                        return Json(processing, indent: 4);
                     case "query":
-                        return Query(vdfFile, id, args.Skip(3).ToArray());
+                        return Query(processing, args.Skip(3).ToArray());
                 }
             }
             catch (Exception e)
@@ -137,29 +153,23 @@ namespace CLI
             return 0;
         }
 
-        static int Json(VDFFile source, uint id, int indent)
+        static int Json(List<Dataset> datasets, int indent)
         {
-            var dataset = source.FindByID(id);
-            if (dataset == null)
+            foreach (var dataset in datasets)
             {
-                Console.Error.WriteLine(ErrorNoId, id);
-                return 6;
+                Console.WriteLine(dataset.Data.ToJSON(indent: indent));
             }
-            Console.WriteLine(dataset.Data.ToJSON(indent: indent));
             return 0;
         }
 
-        static int Query(VDFFile source, uint id, string[] queries)
+        static int Query(List<Dataset> datasets, string[] queries)
         {
-            var dataset = source.FindByID(id);
-            if (dataset == null)
+            foreach (var dataset in datasets)
             {
-                Console.Error.WriteLine(ErrorNoId, id);
-                return 6;
-            }
-            foreach (var query in queries)
-            {
-                Console.WriteLine(String.Join("\n", dataset.Data.Search(query)));
+                foreach (var query in queries)
+                {
+                    Console.WriteLine(String.Join("\n", dataset.Data.Search(query)));
+                }
             }
             return 0;
         }
