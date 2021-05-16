@@ -77,28 +77,21 @@ namespace VDFparse
             }
         }
 
-        // TODO: Correct this to produce correct wide string results
         private static string ReadString(BinaryReader reader, byte width=1)
         {
-            StringBuilder builder = new StringBuilder();
-            byte[] current = new byte[width];
+            var buffer = new List<byte>();
+            byte[] current;
 
             while (true)
             {
-                for (int i = 0; i < width ; ++i)
-                {
-                    current[i] = reader.ReadByte();
-                }
+                current = reader.ReadBytes(width);
                 if (current.All(val => val == 0))
-                {
                     break;
-                }
                 foreach (var c in current)
-                {
-                    builder.Append((char)c);
-                }
+                    buffer.Add(c);
             }
-            return builder.ToString();
+            return (width == 1 ? Encoding.UTF8 : Encoding.Unicode)
+                .GetString(buffer.ToArray());
         }
     }
 }

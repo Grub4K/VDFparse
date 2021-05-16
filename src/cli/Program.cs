@@ -15,6 +15,7 @@ namespace CLI
     {
         static int Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
             switch (args.ElementAtOrDefault(0)){
                 case "-v":
                 case "--version":
