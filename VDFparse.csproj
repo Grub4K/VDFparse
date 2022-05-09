@@ -1,0 +1,24 @@
+<Project>
+
+  <PropertyGroup>
+    <HasSharedItems>true</HasSharedItems>
+
+    <Product>VDFparse</Product>
+    <Description>Parses and displays info about Steam .vdf files</Description>
+    <Version>3.0</Version>
+    <Authors>Grub4K (Simon Sawicki)</Authors>
+    <Copyright>© Simon Sawicki 2022</Copyright>
+
+    <TargetFramework>net6</TargetFramework>
+    <LangVersion>latest</LangVersion>
+
+    <AnalysisMode>All</AnalysisMode>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+</Project>

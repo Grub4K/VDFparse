@@ -1,0 +1,10 @@
+# Translations file for VDFparse (English)
+ErrorCannotFindSteam = Cannot find Steam
+ErrorPlatformUnsupported = Platform unsupported for automated locating
+ErrorUnknownParameter = Unknown parameter "{0}"
+ErrorNotEnoughArguments = Not enough Arguments
+ErrorInvalidNumber = Invalid Number "{0}"
+ErrorNoId = Could not find dataset with ID {0}
+ErrorParsingFile = Error while trying to parse "{0}"
+ErrorUnknown = Unknown Error while executing query: {0}
+HelpMessage = {0} - Parses and displays info about Steam .vdf files\n\nUSAGE\n    {0} <info|list|json|query> <path> [options]\n\nDESCRIPTION\n    info    Show number of entries parsed\n\n    list    Show all appids found\n\n    json    Show key value of an app as JSON\n        options:\n            appid    The appid of the app to use\n\n\n    query   Query specified values for the specified keys\n        options:\n            appid    The appid of the app to use\n            query    The name of the value to query for\n\n    path    A path to a vdf file. Use `appinfo` or `packageinfo` to\n            automatically search for these files in the local Steam\n            installation.\n\nEXAMPLES\n    {0} info <path>\n        Show the number of entries parsed in the vdf file specified by <path>\n\n    {0} json <path> <appid>\n        Show the key value data of <appid> in the vdf file specified by <path>\n\n    {0} list <path>\n        Show all appids found in the vdf file specified by <path>\n\n    {0} query <path> <appid> <query> [query [...]]\n        Query for a value of <appid> in the vdf file specified by <path>

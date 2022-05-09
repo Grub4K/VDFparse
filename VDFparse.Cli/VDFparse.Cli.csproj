@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>VDFparse</AssemblyName>
+    <OutputType>Exe</OutputType>
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <OutputPath>../bin/Cli</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../VDFparse.Core/VDFparse.Core.csproj"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="resources/*.resources" />
+  </ItemGroup>
+
+  <Import Project="../VDFparse.csproj" Label="Shared" />
+
+</Project>
