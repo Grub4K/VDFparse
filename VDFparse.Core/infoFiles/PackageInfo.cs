@@ -1,6 +1,3 @@
-using System.Collections.ObjectModel;
-
-
 namespace VDFparse;
 
 public class PackageInfoReader : IVDFFileReader
@@ -9,18 +6,16 @@ public class PackageInfoReader : IVDFFileReader
 
     public List<Dataset> Read(BinaryReader reader)
     {
-        var Datasets = new List<Dataset>();
+        var datasets = new List<Dataset>();
         while (true)
         {
             var id = reader.ReadUInt32();
             if (id == 0xFFFFFFFF)
-            {
-                return Datasets;
-            }
+                return datasets;
 
-            Datasets.Add(new Dataset(
+            datasets.Add(new Dataset(
                 ID: id,
-                Hash: new ReadOnlyCollection<byte>(reader.ReadBytes(20)),
+                Hash: Array.AsReadOnly(reader.ReadBytes(20)),
                 Token: IsOldVersion ? 0 : reader.ReadUInt64(),
                 ChangeNumber: reader.ReadUInt32(),
                 Data: KVParser.Parse(reader)

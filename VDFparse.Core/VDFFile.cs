@@ -10,7 +10,8 @@ public interface IVDFFileReader
 
 public class VDFFile
 {
-    private static List<IVDFFileReader> Readers = new List<IVDFFileReader>(){
+    private static List<IVDFFileReader> VdfFileReaders = new()
+    {
         new PackageInfoReaderOld(),
         new PackageInfoReader(),
         new AppInfoReader(),
@@ -22,29 +23,27 @@ public class VDFFile
 
     public void Read(string filename)
     {
-        using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-        {
-            Read(fs);
-        }
+        using var fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
+
+        Read(fs);
     }
 
     public void Read(Stream stream)
     {
-        using (var reader = new BinaryReader(stream))
+        using var reader = new BinaryReader(stream);
+
+        var magic = reader.ReadUInt32();
+        Universe = (EUniverse)reader.ReadUInt32();
+        foreach (var vdfFileReader in VdfFileReaders)
         {
-            var magic = reader.ReadUInt32();
-            Universe = (EUniverse)reader.ReadUInt32();
-            foreach (var reader_sub in Readers)
+            if (magic == vdfFileReader.Magic)
             {
-                if (magic == reader_sub.Magic)
-                {
-                    Datasets = reader_sub.Read(reader);
-                    return;
-                }
+                Datasets = vdfFileReader.Read(reader);
+                return;
             }
-            var hexHeader = Convert.ToHexString(BitConverter.GetBytes(magic));
-            throw new InvalidDataException($"Unknown header: {hexHeader}");
         }
+
+        throw new InvalidDataException($"Unknown header: {magic:X8}");
     }
 
     public Dataset? FindByID(uint id)

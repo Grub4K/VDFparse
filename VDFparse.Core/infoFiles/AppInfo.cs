@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 
 namespace VDFparse;
+
 public class AppInfoReader : IVDFFileReader
 {
     public uint Magic { get => 0x07_56_44_27; }
@@ -20,7 +21,7 @@ public class AppInfoReader : IVDFFileReader
                 ID: id,
                 Size: reader.ReadUInt32(),
                 InfoState: reader.ReadUInt32(),
-                LastUpdated: DateTimeFromUnixTime(reader.ReadUInt32()),
+                LastUpdated: DateTimeFromUnixTimestamp(reader.ReadUInt32()),
                 Token: reader.ReadUInt64(),
                 Hash: new ReadOnlyCollection<byte>(reader.ReadBytes(20)),
                 ChangeNumber: reader.ReadUInt32(),
@@ -29,9 +30,10 @@ public class AppInfoReader : IVDFFileReader
         }
     }
 
-    public static DateTime DateTimeFromUnixTime(uint unixTime)
+    private static DateTime UnixBaseTime { get; } = new DateTime(1970, 1, 1);
+    private static DateTime DateTimeFromUnixTimestamp(uint unixTime)
     {
-        return new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc).AddSeconds(unixTime);
+        return UnixBaseTime.AddSeconds(unixTime);
     }
 }
 
