@@ -4,6 +4,6 @@
     <OutputPath>../bin/Core</OutputPath>
   </PropertyGroup>
 
-  <Import Project="../VDFparse.csproj" Label="Shared" />
+  <Import Project="../VDFparse.projitems" Label="Shared" />
 
 </Project>

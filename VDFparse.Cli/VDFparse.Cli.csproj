@@ -18,6 +18,6 @@
     <EmbeddedResource Include="resources/*.resources" />
   </ItemGroup>
 
-  <Import Project="../VDFparse.csproj" Label="Shared" />
+  <Import Project="../VDFparse.projitems" Label="Shared" />
 
 </Project>
