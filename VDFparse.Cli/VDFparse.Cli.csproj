@@ -6,16 +6,12 @@
     <PublishSingleFile>true</PublishSingleFile>
   </PropertyGroup>
 
-  <PropertyGroup>
-    <OutputPath>../bin/Cli</OutputPath>
-  </PropertyGroup>
-
   <ItemGroup>
-    <ProjectReference Include="../VDFparse.Core/VDFparse.Core.csproj"/>
+    <ProjectReference Include="../VDFparse.Core/VDFparse.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="resources/*.resources" />
+    <PackageReference Include="CommandLineParser" Version="2.8.0" />
   </ItemGroup>
 
   <Import Project="../VDFparse.projitems" Label="Shared" />

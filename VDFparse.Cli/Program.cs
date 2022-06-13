@@ -1,186 +1,118 @@
-using System.Text;
 using Microsoft.Win32;
 using VDFparse;
+using CommandLine;
+using System.Text.Json;
 
 namespace VDFParse.Cli;
+
+class Options
+{
+    [Value(0, Required = true, MetaName = "file", HelpText = "The file to read from or `appinfo`/`packageinfo`.")]
+    public string Path { get; set; } = null!;
+
+    [Value(1, MetaName = "id", HelpText = "The ID of the item to query.")]
+    public IEnumerable<uint> Ids { get; set; } = null!;
+
+    [Option('i', "info", HelpText = "Write only info about the specified item or file.")]
+    public bool Info { get; set; }
+}
 
 static class Program
 {
     static int Main(string[] args)
     {
-        Console.OutputEncoding = Encoding.UTF8;
-        switch (args.ElementAtOrDefault(0))
-        {
-            case "-v":
-            case "--version":
-                Console.WriteLine(typeof(Program).Assembly.GetName().Version);
-                return 0;
-            case "-?":
-            case "/?":
-            case "-h":
-            case "--help":
-            case null:
-                Console.WriteLine(Translations.Get("HelpMessage"),
-                    typeof(Program).Assembly.GetName().Name);
-                return 0;
-            default:
-                break;
-        }
-        switch (args[0])
-        {
-            case "list":
-            case "info":
-                if (args.Length < 2)
-                {
-                    Console.Error.WriteLine(Translations.Get("ErrorNotEnoughArguments"));
-                    return 4;
-                }
-                break;
-            case "json":
-                if (args.Length < 3)
-                {
-                    Console.Error.WriteLine(Translations.Get("ErrorNotEnoughArguments"));
-                    return 4;
-                }
-                break;
-            case "query":
-                if (args.Length < 4)
-                {
-                    Console.Error.WriteLine(Translations.Get("ErrorNotEnoughArguments"));
-                    return 4;
-                }
-                break;
-            default:
-                Console.Error.WriteLine(Translations.Get("ErrorUnknownParameter"), args[0]);
-                return 3;
-        }
-        VDFFile vdfFile = new VDFFile();
-        string filePath;
-        if (args[1] == "appinfo" || args[1] == "packageinfo")
+        return Parser.Default
+            .ParseArguments<Options>(args)
+            .MapResult(RunOptions, (_) => 1);
+    }
+
+    static int RunOptions(Options opts)
+    {
+        // Automatically determine path of default files
+        if (opts.Path == "appinfo" || opts.Path == "packageinfo")
         {
             string? steamPath;
             try
             {
                 steamPath = GetSteamPath();
-                Console.WriteLine(steamPath);
                 if (steamPath is null)
                 {
-                    Console.Error.WriteLine(Translations.Get("ErrorCannotFindSteam"));
-                    return 1;
+                    Console.Error.WriteLine("Cannot find Steam.");
+                    return 2;
                 }
             }
             catch (PlatformNotSupportedException)
             {
-                Console.Error.WriteLine(Translations.Get("ErrorPlatformUnsupported"));
-                return 2;
+                Console.Error.WriteLine("Platform unsupported for automated Steam locating.");
+                return 3;
             }
-            if (args[1] == "appinfo")
+            if (opts.Path == "appinfo")
             {
-                filePath = Path.Combine(steamPath, "appcache", "appinfo.vdf");
+                opts.Path = Path.Combine(steamPath, "appcache", "appinfo.vdf");
             }
             else
             {
-                filePath = Path.Combine(steamPath, "appcache", "packageinfo.vdf");
+                opts.Path = Path.Combine(steamPath, "appcache", "packageinfo.vdf");
             }
+        }
+
+        VDFFile vdfFile;
+        try
+        {
+            vdfFile = VDFFile.Read(opts.Path);
+        }
+        catch
+        {
+            Console.Error.WriteLine($"Error while trying to parse \"{opts.Path}\"");
+            return 4;
+        }
+
+        // Output the right data
+        dynamic data;
+        if (opts.Ids is not null)
+        {
+            data = new Dictionary<uint, dynamic>();
+
+            var ids = opts.Ids.ToHashSet();
+            foreach (var dataset in vdfFile.Datasets)
+            {
+                if (ids.Contains(dataset.Id))
+                {
+                    if (opts.Info)
+                        dataset.Data.Clear();
+
+                    data[dataset.Id] = dataset;
+                    ids.Remove(dataset.Id);
+                }
+            }
+            if (ids.Count != 0)
+            {
+                var remaining = String.Join(", ", ids);
+                Console.Error.WriteLine($"Could not find entries with id(s): {remaining}");
+                return 5;
+            }
+        }
+        else if (opts.Info)
+        {
+            data = new
+            {
+                Path = opts.Path,
+                EUniverse = vdfFile.EUniverse,
+                Length = vdfFile.Datasets.Count,
+            };
         }
         else
         {
-            filePath = args[1];
+            data = vdfFile;
         }
-        vdfFile.Read(filePath);
-        try
-        {
-            vdfFile.Read(filePath);
-        }
-        // TODO: Catch explicit errors
-        #pragma warning disable CA1031
-        catch
-        {
-            Console.Error.WriteLine(Translations.Get("ErrorParsingFile"), filePath);
-            return 7;
-        }
-        try
-        {
-            switch (args[0])
-            {
-                case "list":
-                    return List(vdfFile);
-                case "info":
-                    return Info(vdfFile);
-            }
-            List<Dataset> processing;
-            if (args[2] == "*")
-            {
-                processing = vdfFile.Datasets;
-            }
-            else
-            {
-                uint id;
-                bool success = uint.TryParse(args[2], out id);
-                if (!success)
-                {
-                    Console.Error.WriteLine(Translations.Get("ErrorInvalidNumber"), args[2]);
-                    return 5;
-                }
-                var dataset = vdfFile.FindByID(id);
-                if (dataset == null)
-                {
-                    Console.Error.WriteLine(Translations.Get("ErrorNoId"), id);
-                    return 6;
-                }
-                processing = new List<Dataset> { dataset };
-            }
-            switch (args[0])
-            {
-                case "json":
-                    #pragma warning disable CA1806
-                    int.TryParse(args.ElementAtOrDefault(4), out int indent);
-                    return Json(processing, indent: 4);
-                case "query":
-                    return Query(processing, args.Skip(3).ToArray());
-            }
-        }
-        // TODO: catch explicit errors
-        #pragma warning disable CA1031
-        catch (Exception e)
-        {
-            Console.Error.WriteLine(Translations.Get("ErrorUnknown"), e.Message);
-        }
-        return 9;
-    }
 
-    static int List(VDFFile source)
-    {
-        Console.WriteLine(String.Join("\n", source.Datasets.Select(dataset => dataset.ID)));
+        var options = new JsonSerializerOptions();
+        options.Converters.Add(new BytesToBase64JsonConverter());
+
+        Console.WriteLine(JsonSerializer.Serialize(data, options));
         return 0;
     }
 
-    static int Info(VDFFile source)
-    {
-        Console.WriteLine(source.Datasets.Count);
-        return 0;
-    }
-
-    static int Json(List<Dataset> datasets, int indent)
-    {
-        foreach (var dataset in datasets)
-        {
-            Console.WriteLine(dataset.Data.ToJSON(indent: indent));
-        }
-        return 0;
-    }
-
-    static int Query(List<Dataset> datasets, string[] queries)
-    {
-        foreach (var dataset in datasets)
-        {
-            foreach (var query in queries)
-            {
-                Console.WriteLine(String.Join("\n", dataset.Data.Search(query)));
-            }
-        }
-        return 0;
-    }
     static string? GetSteamPath()
     {
 

@@ -1,5 +1,3 @@
-using System.Collections.ObjectModel;
-
 namespace VDFparse;
 
 public class AppInfoReader : IVDFFileReader
@@ -17,16 +15,17 @@ public class AppInfoReader : IVDFFileReader
                 return Datasets;
             }
 
-            Datasets.Add(new AppDataset(
-                ID: id,
-                Size: reader.ReadUInt32(),
-                InfoState: reader.ReadUInt32(),
-                LastUpdated: DateTimeFromUnixTimestamp(reader.ReadUInt32()),
-                Token: reader.ReadUInt64(),
-                Hash: new ReadOnlyCollection<byte>(reader.ReadBytes(20)),
-                ChangeNumber: reader.ReadUInt32(),
-                Data: KVParser.Parse(reader)
-            ));
+            Datasets.Add(new AppDataset
+            {
+                Id = id,
+                Size = reader.ReadUInt32(),
+                InfoState = reader.ReadUInt32(),
+                LastUpdated = DateTimeFromUnixTimestamp(reader.ReadUInt32()),
+                Token = reader.ReadUInt64(),
+                Hash = reader.ReadBytes(20),
+                ChangeNumber = reader.ReadUInt32(),
+                Data = KVParser.Parse(reader),
+            });
         }
     }
 
@@ -37,7 +36,10 @@ public class AppInfoReader : IVDFFileReader
     }
 }
 
-public record AppDataset(uint ID, ReadOnlyCollection<byte> Hash,
-    ulong Token, uint ChangeNumber, KVObject Data,
-    DateTime LastUpdated, uint InfoState, uint Size)
-    : Dataset(ID, Hash, Token, ChangeNumber, Data);
+public class AppDataset : Dataset
+{
+    public uint Size { get; init; }
+    public uint InfoState { get; init; }
+    public DateTime LastUpdated { get; init; }
+
+}

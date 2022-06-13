@@ -13,22 +13,23 @@ public class PackageInfoReader : IVDFFileReader
             if (id == 0xFFFFFFFF)
                 return datasets;
 
-            datasets.Add(new Dataset(
-                ID: id,
-                Hash: Array.AsReadOnly(reader.ReadBytes(20)),
-                Token: IsOldVersion ? 0 : reader.ReadUInt64(),
-                ChangeNumber: reader.ReadUInt32(),
-                Data: KVParser.Parse(reader)
-            ));
+            datasets.Add(new Dataset
+            {
+                Id = id,
+                Hash = reader.ReadBytes(20),
+                Token = IsOldVersion ? 0 : reader.ReadUInt64(),
+                ChangeNumber = reader.ReadUInt32(),
+                Data = KVParser.Parse(reader),
+            });
         }
     }
 
-    public bool IsOldVersion { get => false; }
+    public static bool IsOldVersion { get => false; }
 }
 
-public class PackageInfoReaderOld : PackageInfoReader
+public class PackageInfoReaderOld : PackageInfoReader, IVDFFileReader
 {
     public new uint Magic { get => 0x06_56_55_27; }
 
-    public new bool IsOldVersion { get => true; }
+    public static new bool IsOldVersion { get => true; }
 }

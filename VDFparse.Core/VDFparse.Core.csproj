@@ -1,9 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputPath>../bin/Core</OutputPath>
-  </PropertyGroup>
-
   <Import Project="../VDFparse.projitems" Label="Shared" />
 
 </Project>
