@@ -1,0 +1,31 @@
+name: "Automated Build"
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Download source"
+        uses: actions/checkout@v2
+
+      - name: "Setup .NET"
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.x
+
+      - name: "dotnet restore"
+        run: dotnet restore --nologo -r:win-x64
+
+      - name: "dotnet publish"
+        run: dotnet publish --no-restore --nologo -c:Release -r:win-x64 --no-self-contained -consoleloggerparameters:NoSummary -o:bin/
+
+      - name: "Upload Artifacts"
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: bin/VDFparse.exe
