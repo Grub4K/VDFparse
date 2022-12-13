@@ -69,11 +69,11 @@ static class Program
 
         // Output the right data
         dynamic data;
-        if (opts.Ids is not null)
+
+        var ids = opts.Ids.ToHashSet();
+        if (ids.Count != 0)
         {
             data = new Dictionary<uint, dynamic>();
-
-            var ids = opts.Ids.ToHashSet();
             foreach (var dataset in vdfFile.Datasets)
             {
                 if (ids.Contains(dataset.Id))
