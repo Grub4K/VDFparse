@@ -13,6 +13,7 @@ public class VDFFile
     public static List<IVDFFileReader> Readers { get; } = new()
     {
         new AppInfoReader(),
+        new AppInfoReaderDec22(),
         new PackageInfoReader(),
         new PackageInfoReaderOld(),
     };
