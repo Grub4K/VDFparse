@@ -5,11 +5,11 @@
 
     <Product>VDFparse</Product>
     <Description>Parses and displays info about Steam .vdf files</Description>
-    <Version>3.0</Version>
+    <Version>3.1</Version>
     <Authors>Simon Sawicki (Grub4K)</Authors>
     <Copyright>Copyright (c) 2021-2022 Simon Sawicki</Copyright>
 
-    <TargetFramework>net6</TargetFramework>
+    <TargetFramework>net7</TargetFramework>
     <LangVersion>latest</LangVersion>
 
     <AnalysisMode>Recommended</AnalysisMode>
