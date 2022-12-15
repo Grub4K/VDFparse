@@ -22,10 +22,16 @@ jobs:
         run: sudo apt install clang zlib1g-dev
 
       - name: "dotnet publish (Release, Windows, x64)"
-        run: dotnet publish --nologo -c:Release -o publish/win-x64/ -r:win-x64 --no-self-contained
+        run: dotnet publish -c:Release -o publish/win-x64/ -r:win-x64 --no-self-contained
 
       - name: "dotnet publish (Release, Windows, x64, self contained)"
-        run: dotnet publish --nologo -c:Release -o publish/win-x64-sc/ -r:win-x64 --self-contained
+        run: dotnet publish -c:Release -o publish/win-x64-sc/ -r:win-x64 --self-contained  -p:PublishSingleFile=true -p:PublishTrimmed=true
+
+      - name: "dotnet publish (Release, Linux, x64)"
+        run: dotnet publish -c:Release -o publish/linux-x64/ -r:linux-x64 --no-self-contained
+
+      - name: "dotnet publish (Release, Linux, x64, self contained)"
+        run: dotnet publish -c:Release -o publish/linux-x64-sc/ -r:linux-x64 --self-contained  -p:PublishSingleFile=true -p:PublishTrimmed=true
 
       # - name: "dotnet publish (Release, Windows, x64, AoT)"
       #   run: dotnet publish --nologo -c:Release -o publish/win-x64-aot/ -r:win-x64 -p:PublishAot=true
@@ -34,4 +40,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
-          path: publish/*/VDFparse.exe
+          path: |
+            publish/*/VDFparse.exe
+            publish/*/VDFparse
