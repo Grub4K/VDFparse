@@ -1,16 +1,15 @@
-<Project>
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <HasSharedItems>true</HasSharedItems>
-
     <Product>VDFparse</Product>
-    <Description>Parses and displays info about Steam .vdf files</Description>
-    <Version>3.1</Version>
+    <Description>Convert binary Steam .vdf files to JSON</Description>
+    <Version>4.0</Version>
     <Authors>Simon Sawicki (Grub4K)</Authors>
     <Copyright>Copyright (c) 2021-2022 Simon Sawicki</Copyright>
 
     <TargetFramework>net7</TargetFramework>
     <LangVersion>latest</LangVersion>
+    <OutputType>Exe</OutputType>
 
     <AnalysisMode>Recommended</AnalysisMode>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
@@ -23,5 +22,9 @@
 
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Commandline" Version="[2.0.0-beta4.22272.1,]" />
+  </ItemGroup>
 
 </Project>
