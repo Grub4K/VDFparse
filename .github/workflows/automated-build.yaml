@@ -27,8 +27,8 @@ jobs:
       - name: "dotnet publish (Release, Windows, x64, self contained)"
         run: dotnet publish --nologo -c:Release -o publish/win-x64-sc/ -r:win-x64 --self-contained
 
-      - name: "dotnet publish (Release, Windows, x64, AoT)"
-        run: dotnet publish --nologo -c:Release -o publish/win-x64-aot/ -r:win-x64 -p:PublishAot=true
+      # - name: "dotnet publish (Release, Windows, x64, AoT)"
+      #   run: dotnet publish --nologo -c:Release -o publish/win-x64-aot/ -r:win-x64 -p:PublishAot=true
 
       - name: "Upload Artifacts"
         uses: actions/upload-artifact@v3
