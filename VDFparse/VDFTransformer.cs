@@ -1,4 +1,3 @@
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text.Json;
 
@@ -10,6 +9,9 @@ public class VDFTransformer : IDisposable
     public Utf8JsonWriter Writer { get; private set; }
     public bool InformationOnly { get; init; }
     private bool disposed;
+
+    private static readonly Utf8JsonWriter Utf8JsonNullWriter =
+        new(Stream.Null, new JsonWriterOptions { SkipValidation = true });
 
     public VDFTransformer(
         Stream input,
@@ -81,6 +83,7 @@ public class VDFTransformer : IDisposable
         Writer.WriteEndArray();
 
         Writer.WriteEndObject();
+        Utf8JsonNullWriter.Flush();
     }
 
     // Data structure for a single VDF dataset entry is:
@@ -105,12 +108,12 @@ public class VDFTransformer : IDisposable
 
             case TransformationType.PackageInfoV1:
                 Reader.ReadBytes(20 + 4);
-                KVTransformer.Consume(Reader);
+                KVTransformer.BinaryToJson(Reader, Utf8JsonNullWriter);
                 break;
 
             case TransformationType.PackageInfoV2:
                 Reader.ReadBytes(20 + 4 + 8);
-                KVTransformer.Consume(Reader);
+                KVTransformer.BinaryToJson(Reader, Utf8JsonNullWriter);
                 break;
 
             default:
@@ -146,32 +149,25 @@ public class VDFTransformer : IDisposable
             Writer.WriteBase64String("vdf_hash"u8, Reader.ReadBytes(20));
         }
 
-        if (!InformationOnly)
-        {
-            KVTransformer.Transform(Reader, Writer);
-        }
-        else
-        {
-            KVTransformer.Consume(Reader);
-        }
+        KVTransformer.BinaryToJson(Reader, InformationOnly ? Utf8JsonNullWriter : Writer);
 
         Writer.WriteEndObject();
     }
 
     protected virtual void Dispose(bool disposing)
     {
-        if (!disposed)
-        {
-            if (disposing)
-            {
-                Reader.Dispose();
-                Writer.Dispose();
-            }
+        if (disposed)
+            return;
 
-            Reader = null!;
-            Writer = null!;
-            disposed = true;
+        if (disposing)
+        {
+            Reader.Dispose();
+            Writer.Dispose();
         }
+
+        Reader = null!;
+        Writer = null!;
+        disposed = true;
     }
 
     public void Dispose()
