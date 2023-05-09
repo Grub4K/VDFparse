@@ -18,8 +18,18 @@ Option<bool> indentOption =
         getDefaultValue: () => false
     );
 
-Argument<FileInfo> pathArgument =
-    new(name: "path", description: "The path to the vdf file, or `appinfo`/`packageinfo`.");
+Option<FileInfo> outputPathOption =
+    new(
+        aliases: new[] { "--output", "-o" },
+        description: "The output path or `-` to write to stdout",
+        getDefaultValue: () => new("-")
+    );
+
+Argument<FileInfo> inputPathArgument =
+    new(
+        name: "path",
+        description: "The path to the vdf file, `appinfo`/`packageinfo` to search or `-` to read from stdin."
+    );
 
 Argument<List<uint>> idArguments =
     new(name: "id", description: "Ids to filter by. If no id is specified output all ids.")
@@ -32,35 +42,54 @@ RootCommand rootCommand =
     {
         infoOption,
         indentOption,
-        pathArgument,
+        outputPathOption,
+        inputPathArgument,
         idArguments
     };
 
-rootCommand.SetHandler(
-    (context) =>
-    {
-        bool infoOnly = context.ParseResult.GetValueForOption(infoOption);
-        bool indented = context.ParseResult.GetValueForOption(indentOption);
-        FileInfo path = context.ParseResult.GetValueForArgument(pathArgument);
-        List<uint> idArgs = context.ParseResult.GetValueForArgument(idArguments);
-        HashSet<uint>? ids = idArgs.Count == 0 ? null : idArgs.ToHashSet();
-
-        Main(context, path, ids, new() { Indented = indented }, infoOnly);
-    }
-);
-
+rootCommand.SetHandler(Run);
 return rootCommand.Invoke(args);
 
-static void Main(
-    InvocationContext context,
-    FileInfo path,
-    HashSet<uint>? ids,
-    JsonWriterOptions options = default,
-    bool infoOnly = false
-)
+void Run(InvocationContext context)
 {
-    var pathArg = path.ToString();
-    if (pathArg is "appinfo" or "packageinfo")
+    var input = OpenInputStream(context);
+    if (input is null)
+    {
+        return;
+    }
+    FileInfo outputPath = context.ParseResult.GetValueForOption(outputPathOption)!;
+
+    List<uint> idArgs = context.ParseResult.GetValueForArgument(idArguments);
+    HashSet<uint>? ids = idArgs.Count == 0 ? null : idArgs.ToHashSet();
+
+    bool indented = context.ParseResult.GetValueForOption(indentOption);
+    bool infoOnly = context.ParseResult.GetValueForOption(infoOption);
+
+    using (input)
+    {
+        using var output = outputPath.ToString() is "-"
+            ? Console.OpenStandardOutput()
+            : outputPath.OpenWrite();
+
+        using VDFTransformer transformer =
+            new(input, output, new() { Indented = indented }, infoOnly);
+        transformer.Transform(ids);
+    }
+
+    context.ExitCode = 0;
+}
+
+Stream? OpenInputStream(InvocationContext context)
+{
+    FileInfo inputPath = context.ParseResult.GetValueForArgument(inputPathArgument);
+    var inputPathArg = inputPath.ToString();
+
+    if (inputPathArg is "-")
+    {
+        return Console.OpenStandardInput();
+    }
+
+    if (inputPathArg is "appinfo" or "packageinfo")
     {
         string? steamPath;
         try
@@ -70,32 +99,26 @@ static void Main(
             {
                 context.Console.Error.WriteLine("Cannot find Steam.");
                 context.ExitCode = 2;
-                return;
+                return null;
             }
         }
         catch (PlatformNotSupportedException)
         {
             context.Console.Error.WriteLine("Platform unsupported for automated Steam locating.");
             context.ExitCode = 3;
-            return;
+            return null;
         }
-        path = new FileInfo(Path.Combine(steamPath, "appcache", pathArg + ".vdf"));
+        inputPath = new FileInfo(Path.Combine(steamPath, "appcache", inputPathArg + ".vdf"));
     }
 
-    if (!path.Exists)
+    if (inputPath.Exists)
     {
-        context.Console.Error.WriteLine($"File \"{path}\" does not exist.");
-        context.ExitCode = 1;
-        return;
+        return inputPath.OpenRead();
     }
 
-    using var input = path.OpenRead();
-    using var output = Console.OpenStandardOutput();
-
-    using VDFTransformer transformer = new(input, output, options, infoOnly);
-    transformer.Transform(ids);
-
-    context.ExitCode = 0;
+    context.Console.Error.WriteLine($"File \"{inputPath}\" does not exist.");
+    context.ExitCode = 1;
+    return null;
 }
 
 static string? GetSteamPath()
