@@ -7,7 +7,7 @@
     <Authors>Simon Sawicki (Grub4K)</Authors>
     <Copyright>Copyright (c) 2021-2023 Simon Sawicki</Copyright>
 
-    <TargetFramework>net7</TargetFramework>
+    <TargetFramework>net8</TargetFramework>
     <LangVersion>latest</LangVersion>
     <OutputType>Exe</OutputType>
 
