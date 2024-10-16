@@ -4,7 +4,7 @@ namespace VDFparse;
 
 public static class KVTransformer
 {
-    public static void BinaryToJson(BinaryReader reader, Utf8JsonWriter writer)
+    public static void BinaryToJson(BinaryReader reader, Utf8JsonWriter writer, byte[][]? stringTable = null)
     {
         writer.WriteStartObject("data"u8);
         var startDepth = writer.CurrentDepth;
@@ -18,7 +18,7 @@ public static class KVTransformer
                     return;
                 continue;
             }
-            writer.WritePropertyName(ReadString(reader));
+            writer.WritePropertyName(stringTable is null ? ReadString(reader) : stringTable[reader.ReadUInt32()]);
             switch (current)
             {
                 case DataType.START:
@@ -49,12 +49,12 @@ public static class KVTransformer
                     writer.WriteNumberValue(reader.ReadUInt64());
                     break;
                 default:
-                    throw new InvalidDataException($"Unexpected type for value ({current})");
+                    throw new InvalidDataException($"Unexpected type for value ({current:X})");
             }
         }
     }
 
-    private static byte[] ReadString(BinaryReader reader)
+    public static byte[] ReadString(BinaryReader reader)
     {
         using var buffer = new MemoryStream();
         byte current;
@@ -80,5 +80,5 @@ internal enum DataType : byte
     UINT64,
     END,
     INT64 = 10,
-    ENDB = 11,
+    ENDB,
 }

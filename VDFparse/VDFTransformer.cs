@@ -8,6 +8,7 @@ public class VDFTransformer : IDisposable
     public BinaryReader Reader { get; private set; }
     public Utf8JsonWriter Writer { get; private set; }
     public bool InformationOnly { get; init; }
+    private byte[][]? StringTable;
     private bool disposed;
 
     private static readonly Utf8JsonWriter Utf8JsonNullWriter =
@@ -35,13 +36,14 @@ public class VDFTransformer : IDisposable
         {
             0x07_56_44_27 => TransformationType.AppInfoV1,
             0x07_56_44_28 => TransformationType.AppInfoV2,
+            0x07_56_44_29 => TransformationType.AppInfoV3,
             0x06_56_55_27 => TransformationType.PackageInfoV1,
             0x06_56_55_28 => TransformationType.PackageInfoV2,
             _ => throw new InvalidDataException($"Unknown header: {magic:X8}"),
         };
         var endMarker = type switch
         {
-            TransformationType.AppInfoV1 or TransformationType.AppInfoV2 => 0u,
+            TransformationType.AppInfoV1 or TransformationType.AppInfoV2 or TransformationType.AppInfoV3 => 0u,
             TransformationType.PackageInfoV1 or TransformationType.PackageInfoV2 => ~0u,
             _ => throw new UnreachableException($"{nameof(type)} was checked before"),
         };
@@ -61,6 +63,24 @@ public class VDFTransformer : IDisposable
                 _ => throw new InvalidDataException("Invalid value for EUniverse"),
             }
         );
+        if (type is TransformationType.AppInfoV3)
+        {
+            if (!Reader.BaseStream.CanSeek)
+            {
+                throw new NotImplementedException("Parsing string tables requires seeking");
+            }
+            var offset = Reader.ReadInt64();
+            var position = Reader.BaseStream.Position;
+            Reader.BaseStream.Seek(offset, SeekOrigin.Begin);
+
+            var size = Reader.ReadUInt32();
+            StringTable = new byte[size][];
+            for (int i = 0; i < size; i++) {
+                StringTable[i] = KVTransformer.ReadString(Reader);
+            }
+
+            Reader.BaseStream.Seek(position, SeekOrigin.Begin);
+        }
 
         Writer.WriteStartArray("datasets"u8);
         while (true)
@@ -103,6 +123,7 @@ public class VDFTransformer : IDisposable
         {
             case TransformationType.AppInfoV1:
             case TransformationType.AppInfoV2:
+            case TransformationType.AppInfoV3:
                 Reader.ReadBytes(Reader.ReadInt32());
                 break;
 
@@ -125,7 +146,7 @@ public class VDFTransformer : IDisposable
     {
         Writer.WriteStartObject();
         Writer.WriteNumber("id"u8, id);
-        if (type is TransformationType.AppInfoV1 or TransformationType.AppInfoV2)
+        if (type is TransformationType.AppInfoV1 or TransformationType.AppInfoV2 or TransformationType.AppInfoV3)
         {
             Writer.WriteNumber("size"u8, Reader.ReadUInt32());
             Writer.WriteNumber("info_state"u8, Reader.ReadUInt32());
@@ -144,12 +165,12 @@ public class VDFTransformer : IDisposable
 
         Writer.WriteNumber("change_number"u8, Reader.ReadUInt32());
 
-        if (type == TransformationType.AppInfoV2)
+        if (type is TransformationType.AppInfoV2 or TransformationType.AppInfoV3)
         {
             Writer.WriteBase64String("vdf_hash"u8, Reader.ReadBytes(20));
         }
 
-        KVTransformer.BinaryToJson(Reader, InformationOnly ? Utf8JsonNullWriter : Writer);
+        KVTransformer.BinaryToJson(Reader, InformationOnly ? Utf8JsonNullWriter : Writer, StringTable);
 
         Writer.WriteEndObject();
     }
@@ -181,6 +202,7 @@ enum TransformationType
 {
     AppInfoV1,
     AppInfoV2,
+    AppInfoV3,
     PackageInfoV1,
     PackageInfoV2,
 }
