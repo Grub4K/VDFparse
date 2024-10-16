@@ -1,3 +1,6 @@
-[Bb]in/
-[Oo]bj/
-publish/
+/[Bb]in/
+/[Oo]bj/
+/publish/
+/build/
+/lib/
+*.g.cs

@@ -1,0 +1,96 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: Build targets
+        type: string
+        default: |
+          windows x64 .exe
+          linux   x64
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4  
+      - name: Setup bflat
+        env:
+          BFLAT_VER: 8.0.2
+        run: |
+          mkdir -p build
+          curl -Lo "build/bflat-$BFLAT_VER-linux-glibc-x64.tar.gz" "https://github.com/bflattened/bflat/releases/download/v${BFLAT_VER}/bflat-${BFLAT_VER}-linux-glibc-x64.tar.gz"
+          tar -xC build -f "build/bflat-${BFLAT_VER}-linux-glibc-x64.tar.gz"
+
+      - name: Download dependencies
+        run: |
+          mkdir -p lib
+          curl -Lo lib/System.CommandLine.nuget https://www.nuget.org/api/v2/package/System.CommandLine/2.0.0-beta4.22272.1
+          unzip -jud lib lib/System.CommandLine.nuget lib/net6.0/System.CommandLine.dll
+
+      - name: Parse application project data
+        id: parse
+        run: |
+          names=( product description version authors copyright )
+          for name in "${names[@]}"; do
+              printf '%s=%s\n' "${name}" "$(sed -rn "s/\s+<${name^}>([^<]+).*/\1/p" VDFparse.csproj)" | tee "${GITHUB_OUTPUT}"
+          done
+
+      - name: Generate pre-build files
+        env:
+          AUTHORS: ${{ steps.parse.outputs.authors }}
+          COPYRIGHT: ${{ steps.parse.outputs.copyright }}
+          DESCRIPTION: ${{ steps.parse.outputs.description }}
+          PRODUCT: ${{ steps.parse.outputs.product }}
+          VERSION: ${{ steps.parse.outputs.version }}
+        run: |
+          cat <<EOF | tee "${PRODUCT}/${PRODUCT}.g.cs"
+          global using global::System;
+          global using global::System.Collections.Generic;
+          global using global::System.IO;
+          global using global::System.Linq;
+          global using global::System.Net.Http;
+          global using global::System.Threading;
+          global using global::System.Threading.Tasks;
+          [assembly: global::System.Reflection.AssemblyCompanyAttribute("${AUTHORS}")]
+          [assembly: global::System.Reflection.AssemblyConfigurationAttribute("Release")]
+          [assembly: global::System.Reflection.AssemblyCopyrightAttribute("${COPYRIGHT}")]
+          [assembly: global::System.Reflection.AssemblyDescriptionAttribute("${DESCRIPTION}")]
+          [assembly: global::System.Reflection.AssemblyFileVersionAttribute("${VERSION}.0.0")]
+          [assembly: global::System.Reflection.AssemblyProductAttribute("${PRODUCT}")]
+          [assembly: global::System.Reflection.AssemblyTitleAttribute("${PRODUCT}")]
+          [assembly: global::System.Reflection.AssemblyVersionAttribute("${VERSION}.0.0")]
+          EOF
+
+      - name: Build
+        env:
+          TARGETS: ${{ inputs.targets }}
+          PRODUCT: ${{ steps.parse.outputs.product }}
+        run: |
+          mkdir -p release
+          while read -r os arch suffix; do
+            if [[ -z "${arch}" ]]; then continue; fi
+            build/bflat build \
+              -r lib/System.CommandLine.dll \
+              --deterministic --no-globalization --no-debug-info --separate-symbols \
+              --os "${os}" --arch "${arch}" -o "release/${PRODUCT}${suffix}"
+          done <<<"${TARGETS}"
+
+      - name: Release
+        env:
+          TARGETS: ${{ inputs.targets }}
+          PRODUCT: ${{ steps.parse.outputs.product }}
+          VERSION: ${{ steps.parse.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files=()
+          while read -r os arch suffix; do
+            if [[ -z "${arch}" ]]; then continue; fi
+            file="release/${PRODUCT}${suffix}"
+            files+=( "${file}" )
+          done <<<"${TARGETS}"
+
+          gh release create "v${VERSION}" \
+            --latest --generate-notes \
+            --title "VDFparse v${VERSION}" \
+            "${files[@]}"
