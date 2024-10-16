@@ -1,0 +1,46 @@
+name: Release
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup bflat
+        env:
+          BFLAT_VER: 8.0.2
+        run: |
+          # https://github.com/bflattened/bflat/issues/203#issuecomment-2249999488
+          sudo apt install libc++-dev
+          mkdir -p build
+          curl -Lo "build/bflat-$BFLAT_VER-linux-glibc-x64.tar.gz" "https://github.com/bflattened/bflat/releases/download/v${BFLAT_VER}/bflat-${BFLAT_VER}-linux-glibc-x64.tar.gz"
+          tar -xC build -f "build/bflat-${BFLAT_VER}-linux-glibc-x64.tar.gz"
+
+      - name: Download dependencies
+        run: |
+          mkdir -p lib
+          curl -Lo lib/System.CommandLine.nuget https://www.nuget.org/api/v2/package/System.CommandLine/2.0.0-beta4.22272.1
+          unzip -jud lib lib/System.CommandLine.nuget lib/net6.0/System.CommandLine.dll
+
+      - name: Build and release
+        env:
+          TARGETS: |
+            windows x64 .exe
+            linux   x64
+        run: |
+          files=()
+          while read -r os arch suffix; do
+            if [[ -z "${arch}" ]]; then continue; fi
+            files+=( "build/VDFparse${suffix}" )
+            build/bflat build \
+              -r lib/System.CommandLine.dll \
+              --deterministic --no-globalization --no-debug-info --separate-symbols \
+              --os "${os}" --arch "${arch}" -o "build/VDFparse${suffix}"
+          done <<<"${TARGETS}"
+
+          version="$(sed -rn 's/\s+<Version>([[:digit:]]+.[[:digit:]]+(.[[:digit:]]+)?).*/v\1/p' VDFparse.csproj)"
+          gh release create "${version}" \
+            --latest --generate-notes \
+            --title "VDFparse v${version}" \
+            "${files[@]}"
