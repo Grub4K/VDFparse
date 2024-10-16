@@ -25,6 +25,7 @@ jobs:
 
       - name: Build and release
         env:
+          GH_TOKEN: ${{ github.token }}
           TARGETS: |
             windows x64 .exe
             linux   x64
